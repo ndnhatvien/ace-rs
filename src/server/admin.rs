@@ -1,14 +1,12 @@
 //! Admin UI routes and HTML rendering
 
-use crate::server::{config::ServerConfig, error::ApiError, tokens};
+use crate::server::tokens;
 use axum::{
     extract::State,
     response::{Html, IntoResponse, Redirect},
     Form,
 };
 use serde::Deserialize;
-use sqlx::SqlitePool;
-use std::sync::Arc;
 use std::time::Duration;
 use tower_sessions::Session;
 
@@ -52,11 +50,11 @@ pub async fn admin_login_page() -> Html<String> {
 
 /// Handle admin login
 pub async fn admin_login(
-    State(config): State<Arc<ServerConfig>>,
+    State(state): State<crate::server::api::AppState>,
     session: Session,
     Form(form): Form<LoginForm>,
 ) -> impl IntoResponse {
-    if form.password == config.admin_password {
+    if form.password == state.config.admin_password {
         let _ = session.insert("admin_logged_in", true).await;
         Redirect::to("/admin/tokens")
     } else {
@@ -68,7 +66,7 @@ pub async fn admin_login(
 
 /// Admin tokens list page
 pub async fn admin_tokens_page(
-    State(pool): State<SqlitePool>,
+    State(state): State<crate::server::api::AppState>,
     session: Session,
 ) -> Result<Html<String>, impl IntoResponse> {
     // Check admin session
@@ -76,7 +74,7 @@ pub async fn admin_tokens_page(
         return Err(Redirect::to("/admin"));
     }
 
-    let token_rows = tokens::list_tokens(&pool).await.map_err(|_| Redirect::to("/admin"))?;
+    let token_rows = tokens::list_tokens(&state.pool).await.map_err(|_| Redirect::to("/admin"))?;
 
     let mut html = String::from(
         r#"
@@ -139,7 +137,7 @@ pub async fn admin_tokens_page(
 
 /// Handle create token
 pub async fn admin_create_token(
-    State(pool): State<SqlitePool>,
+    State(state): State<crate::server::api::AppState>,
     session: Session,
     Form(form): Form<CreateTokenForm>,
 ) -> Result<Html<String>, impl IntoResponse> {
@@ -148,7 +146,7 @@ pub async fn admin_create_token(
         return Err(Redirect::to("/admin"));
     }
 
-    let (_id, token) = tokens::create_token(&pool, &form.name).await.map_err(|_| Redirect::to("/admin"))?;
+    let (_id, token) = tokens::create_token(&state.pool, &form.name).await.map_err(|_| Redirect::to("/admin"))?;
 
     let html = format!(
         r#"
@@ -180,7 +178,7 @@ pub async fn admin_create_token(
 
 /// Handle revoke token
 pub async fn admin_revoke_token(
-    State(pool): State<SqlitePool>,
+    State(state): State<crate::server::api::AppState>,
     session: Session,
     axum::extract::Path(id): axum::extract::Path<String>,
 ) -> Result<Redirect, impl IntoResponse> {
@@ -189,7 +187,7 @@ pub async fn admin_revoke_token(
         return Err(Redirect::to("/admin"));
     }
 
-    tokens::revoke_token(&pool, &id).await.map_err(|_| Redirect::to("/admin"))?;
+    tokens::revoke_token(&state.pool, &id).await.map_err(|_| Redirect::to("/admin"))?;
     Ok(Redirect::to("/admin/tokens"))
 }
 

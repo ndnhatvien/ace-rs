@@ -59,12 +59,12 @@ fn format_search_results(results: &[SearchResult]) -> String {
 
 /// Handle search request
 pub async fn handle_search(
-    State(pool): State<SqlitePool>,
+    State(state): State<crate::server::api::AppState>,
     headers: HeaderMap,
     Json(request): Json<SearchRequest>,
 ) -> Result<Json<SearchResponse>, ApiError> {
     // Check bearer token
-    auth::check_bearer_token(&pool, &headers).await?;
+    auth::check_bearer_token(&state.pool, &headers).await?;
 
     if request.blobs.added_blobs.is_empty() {
         return Ok(Json(SearchResponse {
@@ -106,7 +106,7 @@ pub async fn handle_search(
         query = query.bind(blob_name);
     }
 
-    let results = query.fetch_all(&pool).await?;
+    let results = query.fetch_all(&state.pool).await?;
 
     if results.is_empty() {
         return Ok(Json(SearchResponse {

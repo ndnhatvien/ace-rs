@@ -41,12 +41,12 @@ fn sha256_hex(data: &str) -> String {
 
 /// Handle batch blob upload
 pub async fn handle_batch_upload(
-    State(pool): State<SqlitePool>,
+    State(state): State<crate::server::api::AppState>,
     headers: HeaderMap,
     Json(request): Json<BatchUploadRequest>,
 ) -> Result<Json<BatchUploadResponse>, ApiError> {
     // Check bearer token
-    auth::check_bearer_token(&pool, &headers).await?;
+    auth::check_bearer_token(&state.pool, &headers).await?;
 
     let mut blob_names = Vec::new();
 
@@ -72,7 +72,7 @@ pub async fn handle_batch_upload(
             now,
             now
         )
-        .execute(&pool)
+        .execute(&state.pool)
         .await?;
 
         blob_names.push(blob_name);

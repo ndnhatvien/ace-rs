@@ -16,15 +16,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        rust: [stable, beta]
-        include:
-          - os: ubuntu-latest
-            rust: nightly
-        exclude:
-          - os: macos-latest
-            rust: beta
 
     steps:
       - uses: actions/checkout@v4

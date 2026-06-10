@@ -29,32 +29,36 @@ struct ErrorDetail {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        let (status, code, message) = match self {
+        let (status, code, message) = match &self {
             ApiError::Unauthorized => (
                 StatusCode::UNAUTHORIZED,
                 "unauthorized",
-                "Invalid or revoked token",
+                "Invalid or revoked token".to_string(),
             ),
-            ApiError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "bad_request", msg.as_str()),
+            ApiError::BadRequest(msg) => (
+                StatusCode::BAD_REQUEST,
+                "bad_request",
+                msg.clone(),
+            ),
             ApiError::Internal(msg) => {
                 tracing::error!("Internal error: {}", msg);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal",
-                    "Internal server error",
+                    "Internal server error".to_string(),
                 )
             }
             ApiError::PayloadTooLarge => (
                 StatusCode::PAYLOAD_TOO_LARGE,
                 "payload_too_large",
-                "Request payload too large",
+                "Request payload too large".to_string(),
             ),
         };
 
         let body = Json(ErrorResponse {
             error: ErrorDetail {
                 code: code.to_string(),
-                message: message.to_string(),
+                message,
             },
         });
 

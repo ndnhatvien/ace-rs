@@ -22,27 +22,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux x86_64
-          - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
-            artifact_name: ace-tool-rs
-            asset_name: ace-tool-rs_Linux_x86_64.tar.gz
-            universal: false
-            cross: false
-          # Linux aarch64
-          - target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
-            artifact_name: ace-tool-rs
-            asset_name: ace-tool-rs_Linux_aarch64.tar.gz
-            universal: false
-            cross: true
-          # macOS universal (x86_64 + aarch64)
-          - target: universal-apple-darwin
-            os: macos-latest
-            artifact_name: ace-tool-rs
-            asset_name: ace-tool-rs_Darwin_universal.tar.gz
-            universal: true
-            cross: false
+          # # Linux x86_64
+          # - target: x86_64-unknown-linux-musl
+          #   os: ubuntu-latest
+          #   artifact_name: ace-tool-rs
+          #   asset_name: ace-tool-rs_Linux_x86_64.tar.gz
+          #   universal: false
+          #   cross: false
+          # # Linux aarch64
+          # - target: aarch64-unknown-linux-musl
+          #   os: ubuntu-latest
+          #   artifact_name: ace-tool-rs
+          #   asset_name: ace-tool-rs_Linux_aarch64.tar.gz
+          #   universal: false
+          #   cross: true
+          # # macOS universal (x86_64 + aarch64)
+          # - target: universal-apple-darwin
+          #   os: macos-latest
+          #   artifact_name: ace-tool-rs
+          #   asset_name: ace-tool-rs_Darwin_universal.tar.gz
+          #   universal: true
+          #   cross: false
           # Windows x86_64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
@@ -50,13 +50,13 @@ jobs:
             asset_name: ace-tool-rs_Windows_x86_64.zip
             universal: false
             cross: false
-          # Windows aarch64
-          - target: aarch64-pc-windows-msvc
-            os: windows-latest
-            artifact_name: ace-tool-rs.exe
-            asset_name: ace-tool-rs_Windows_aarch64.zip
-            universal: false
-            cross: false
+          # # Windows aarch64
+          # - target: aarch64-pc-windows-msvc
+          #   os: windows-latest
+          #   artifact_name: ace-tool-rs.exe
+          #   asset_name: ace-tool-rs_Windows_aarch64.zip
+          #   universal: false
+          #   cross: false
 
     steps:
       - name: Checkout

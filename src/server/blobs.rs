@@ -55,7 +55,7 @@ pub async fn handle_batch_upload(
         let now = Utc::now().to_rfc3339();
 
         // Upsert blob (insert or update if exists)
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO blobs (blob_name, path, content, content_hash, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -64,13 +64,13 @@ pub async fn handle_batch_upload(
                 content_hash = excluded.content_hash,
                 updated_at = excluded.updated_at
             "#,
-            blob_name,
-            blob.path,
-            blob.content,
-            content_hash,
-            now,
-            now
         )
+        .bind(&blob_name)
+        .bind(&blob.path)
+        .bind(&blob.content)
+        .bind(&content_hash)
+        .bind(&now)
+        .bind(&now)
         .execute(&state.pool)
         .await?;
 

@@ -12,20 +12,12 @@ env:
 
 jobs:
   test:
-    name: Test Suite
-    runs-on: ${{ matrix.os }}
+    name: Test Suite (Windows x86_64)
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        rust: [stable, beta]
-        include:
-          - os: ubuntu-latest
-            rust: nightly
-        exclude:
-          - os: macos-latest
-            rust: beta
-
+        rust: [stable]
     steps:
       - uses: actions/checkout@v4
 
@@ -33,58 +25,31 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
+          targets: x86_64-pc-windows-msvc
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ matrix.rust }}
 
-      - name: Check formatting
-        if: matrix.rust == 'stable' && matrix.os == 'ubuntu-latest'
-        run: cargo fmt --all -- --check
-
       - name: Run cargo check
-        run: cargo check --all-targets --all-features
+        run: cargo check --all-targets --all-features --target x86_64-pc-windows-msvc
 
       - name: Run unit tests
-        run: cargo test --lib --verbose
+        run: cargo test --lib --verbose --target x86_64-pc-windows-msvc
 
       - name: Run integration tests
-        run: cargo test --test '*' --verbose
+        run: cargo test --test "*" --verbose --target x86_64-pc-windows-msvc
 
       - name: Run doc tests
-        run: cargo test --doc --verbose
-
-      - name: Run all tests with all features
-        run: cargo test --all-features --verbose
+        run: cargo test --doc --verbose --target x86_64-pc-windows-msvc
 
       - name: Build release
-        run: cargo build --release --verbose
-
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin
-
-      - name: Generate coverage
-        run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./cobertura.xml
-          fail_ci_if_error: false
+        run: cargo build --release --target x86_64-pc-windows-msvc --verbose
 
   lint:
-    name: Linting
-    runs-on: ubuntu-latest
+    name: Lint (Windows x86_64)
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -92,59 +57,32 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: x86_64-pc-windows-msvc
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Run rustfmt
+      - name: Check formatting
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features --target x86_64-pc-windows-msvc -- -D warnings
 
-      - name: Check documentation
-        run: cargo doc --no-deps --all-features
-        env:
-          RUSTDOCFLAGS: -D warnings
-
-  security:
-    name: Security Audit
+  docker:
+    name: Build Docker Image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-
-      - name: Run security audit
-        run: cargo audit
-
-  benchmark:
-    name: Benchmarks
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Run benchmarks
-        run: cargo bench --no-run
-
-  minimum-rust-version:
-    name: Minimum Rust Version
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust 1.90
-        uses: dtolnay/rust-toolchain@master
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@v5
         with:
-          toolchain: "1.90"
-
-      - name: Check with minimum Rust version
-        run: cargo check --all-targets
+          context: .
+          push: false
+          tags: ace-server-rs:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64

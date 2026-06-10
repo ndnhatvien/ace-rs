@@ -1,6 +1,8 @@
 //! Token management: create, verify, revoke tokens
 
 use anyhow::{anyhow, Result};
+use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHasher};
 use chrono::Utc;
 use rand::Rng;
 use sqlx::SqlitePool;
@@ -12,12 +14,17 @@ pub fn generate_secure_token() -> String {
     hex::encode(bytes)
 }
 
-/// Hash a token using argon2
+/// Hash a token using argon2 (RustCrypto `argon2` crate v0.5)
 pub fn hash_token(token: &str) -> Result<String> {
-    let salt = b"ace-server-v1-salt"; // Fixed salt for MVP
-    let config = argon2::Config::default();
-    argon2::hash_encoded(token.as_bytes(), salt, &config)
-        .map_err(|e| anyhow!("Failed to hash token: {}", e))
+    // Fixed salt for MVP (deterministic so we can look tokens up by hash).
+    // NOTE: For production, use a per-token random salt + separate lookup column.
+    let salt = SaltString::encode_b64(b"ace-server-v1-salt")
+        .map_err(|e| anyhow!("Failed to build salt: {}", e))?;
+    let argon2 = Argon2::default();
+    let hash = argon2
+        .hash_password(token.as_bytes(), &salt)
+        .map_err(|e| anyhow!("Failed to hash token: {}", e))?;
+    Ok(hash.to_string())
 }
 
 /// Create a new token
@@ -27,15 +34,13 @@ pub async fn create_token(pool: &SqlitePool, name: &str) -> Result<(String, Stri
     let id = Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
 
-    sqlx::query!(
-        "INSERT INTO tokens (id, name, token_hash, created_at) VALUES (?, ?, ?, ?)",
-        id,
-        name,
-        token_hash,
-        now
-    )
-    .execute(pool)
-    .await?;
+    sqlx::query("INSERT INTO tokens (id, name, token_hash, created_at) VALUES (?, ?, ?, ?)")
+        .bind(&id)
+        .bind(name)
+        .bind(&token_hash)
+        .bind(&now)
+        .execute(pool)
+        .await?;
 
     Ok((id, token))
 }
@@ -46,23 +51,21 @@ pub async fn verify_and_update_token(pool: &SqlitePool, token: &str) -> Result<(
     let now = Utc::now().to_rfc3339();
 
     // Check if token exists and is not revoked
-    let row = sqlx::query!(
+    let row: Option<(String,)> = sqlx::query_as(
         "SELECT id FROM tokens WHERE token_hash = ? AND revoked_at IS NULL",
-        token_hash
     )
+    .bind(&token_hash)
     .fetch_optional(pool)
     .await?;
 
     match row {
-        Some(record) => {
+        Some((id,)) => {
             // Update last_used_at
-            sqlx::query!(
-                "UPDATE tokens SET last_used_at = ? WHERE id = ?",
-                now,
-                record.id
-            )
-            .execute(pool)
-            .await?;
+            sqlx::query("UPDATE tokens SET last_used_at = ? WHERE id = ?")
+                .bind(&now)
+                .bind(&id)
+                .execute(pool)
+                .await?;
             Ok(())
         }
         None => Err(anyhow!("Invalid or revoked token")),
@@ -73,7 +76,9 @@ pub async fn verify_and_update_token(pool: &SqlitePool, token: &str) -> Result<(
 pub async fn revoke_token(pool: &SqlitePool, id: &str) -> Result<()> {
     let now = Utc::now().to_rfc3339();
 
-    sqlx::query!("UPDATE tokens SET revoked_at = ? WHERE id = ?", now, id)
+    sqlx::query("UPDATE tokens SET revoked_at = ? WHERE id = ?")
+        .bind(&now)
+        .bind(id)
         .execute(pool)
         .await?;
 
@@ -93,11 +98,10 @@ pub struct TokenRow {
 /// List all tokens
 pub async fn list_tokens(pool: &SqlitePool) -> Result<Vec<TokenRow>> {
     let tokens = sqlx::query_as::<_, TokenRow>(
-        "SELECT id, name, created_at, revoked_at, last_used_at FROM tokens ORDER BY created_at DESC"
+        "SELECT id, name, created_at, revoked_at, last_used_at FROM tokens ORDER BY created_at DESC",
     )
     .fetch_all(pool)
     .await?;
 
     Ok(tokens)
 }
-

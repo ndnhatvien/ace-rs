@@ -10,6 +10,9 @@ pub mod strategy;
 pub mod tools;
 pub mod utils;
 
+#[cfg(feature = "server")]
+pub mod server;
+
 /// User-Agent header value (matches augment.mjs format: augment.cli/{version})
 pub const USER_AGENT: &str = "augment.cli/0.17.0";
 

@@ -1,0 +1,31 @@
+FROM rust:1.75 as builder
+WORKDIR /app
+
+# Copy manifests
+COPY Cargo.toml Cargo.lock ./
+
+# Copy source
+COPY src ./src
+
+# Build server binary with server feature
+RUN cargo build --release --bin ace-server-rs --features server
+
+# Runtime image
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y libsqlite3-0 ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy binary
+COPY --from=builder /app/target/release/ace-server-rs /usr/local/bin/
+
+# Expose port
+EXPOSE 8080
+
+# Volume for database
+VOLUME /data
+
+# Run server
+CMD ["ace-server-rs"]

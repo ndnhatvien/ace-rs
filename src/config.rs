@@ -57,8 +57,13 @@ pub struct UploadStrategy {
 impl Config {
     /// Create a new Config with required base_url and token, plus optional settings
     pub fn new(base_url: String, token: String, options: ConfigOptions) -> Result<Arc<Self>> {
-        // Ensure base_url uses https:// (using strip_prefix to avoid replacing http:// in path)
-        let base_url = if let Some(rest) = base_url.strip_prefix("http://") {
+        // Allow HTTP for localhost and 127.0.0.1 (for self-hosted server)
+        // Otherwise ensure base_url uses https://
+        let base_url = if base_url.starts_with("http://localhost")
+            || base_url.starts_with("http://127.0.0.1")
+        {
+            base_url
+        } else if let Some(rest) = base_url.strip_prefix("http://") {
             format!("https://{}", rest)
         } else if base_url.starts_with("https://") {
             base_url

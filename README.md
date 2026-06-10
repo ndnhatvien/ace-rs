@@ -58,8 +58,39 @@ cargo build --release
 ### Requirements
 
 - Rust 1.70 or later
-- An API endpoint for the indexing service
+- An API endpoint for the indexing service OR self-hosted server (see below)
 - Authentication token
+
+## Self-Hosted Server
+
+You can now run your own local-first indexing and search server instead of relying on an external hosted API.
+
+### Quick Start with Docker Compose
+
+```bash
+# Set admin password
+export ACE_ADMIN_PASSWORD=your-strong-password
+export ACE_SESSION_SECRET=your-secret-key
+
+# Start server
+docker-compose up --build
+
+# Visit http://localhost:8080/admin to create tokens
+```
+
+### Use Client with Self-Hosted Server
+
+```bash
+ace-tool-rs --base-url http://localhost:8080 --token <your-token>
+```
+
+**What the self-hosted server provides:**
+- Local SQLite storage with FTS5 full-text search
+- BM25-based semantic retrieval
+- Simple Admin UI for token management
+- No external dependencies
+
+**See [docs/self-hosted-server.md](docs/self-hosted-server.md) for complete setup, configuration, and deployment instructions.**
 
 ## Usage
 

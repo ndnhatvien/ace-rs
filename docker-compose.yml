@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  ace-server:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ace-data:/data
+    environment:
+      ACE_BIND_ADDR: 0.0.0.0:8080
+      ACE_DB_PATH: /data/ace-server.db
+      ACE_ADMIN_PASSWORD: ${ACE_ADMIN_PASSWORD:-change-me-in-production}
+      ACE_SESSION_SECRET: ${ACE_SESSION_SECRET:-change-me-too-in-production}
+      RUST_LOG: info
+
+volumes:
+  ace-data:

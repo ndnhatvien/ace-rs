@@ -14,9 +14,18 @@ pub fn generate_secure_token() -> String {
 
 /// Hash a token using argon2
 pub fn hash_token(token: &str) -> Result<String> {
-    let salt = b"ace-server-v1-salt"; // Fixed salt for MVP
-    let config = argon2::Config::default();
-    argon2::hash_encoded(token.as_bytes(), salt, &config)
+    use argon2::{
+        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+        Argon2,
+    };
+
+    // Generate a random salt for each token
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+
+    argon2
+        .hash_password(token.as_bytes(), &salt)
+        .map(|hash| hash.to_string())
         .map_err(|e| anyhow!("Failed to hash token: {}", e))
 }
 
@@ -42,31 +51,44 @@ pub async fn create_token(pool: &SqlitePool, name: &str) -> Result<(String, Stri
 
 /// Verify token and update last_used_at
 pub async fn verify_and_update_token(pool: &SqlitePool, token: &str) -> Result<()> {
-    let token_hash = hash_token(token)?;
+    use argon2::{
+        password_hash::{PasswordHash, PasswordVerifier},
+        Argon2,
+    };
+
     let now = Utc::now().to_rfc3339();
 
-    // Check if token exists and is not revoked
-    let row = sqlx::query!(
-        "SELECT id FROM tokens WHERE token_hash = ? AND revoked_at IS NULL",
-        token_hash
+    // Get all non-revoked tokens and verify against each hash
+    // This is needed because we can't hash the incoming token to match it directly
+    // (each hash has a unique salt)
+    let rows = sqlx::query!(
+        "SELECT id, token_hash FROM tokens WHERE revoked_at IS NULL"
     )
-    .fetch_optional(pool)
+    .fetch_all(pool)
     .await?;
 
-    match row {
-        Some(record) => {
-            // Update last_used_at
+    for row in rows {
+        // Try to verify the token against this hash
+        let parsed_hash = PasswordHash::new(&row.token_hash)
+            .map_err(|e| anyhow!("Failed to parse hash: {}", e))?;
+
+        if Argon2::default()
+            .verify_password(token.as_bytes(), &parsed_hash)
+            .is_ok()
+        {
+            // Found matching token, update last_used_at
             sqlx::query!(
                 "UPDATE tokens SET last_used_at = ? WHERE id = ?",
                 now,
-                record.id
+                row.id
             )
             .execute(pool)
             .await?;
-            Ok(())
+            return Ok(());
         }
-        None => Err(anyhow!("Invalid or revoked token")),
     }
+
+    Err(anyhow!("Invalid or revoked token"))
 }
 
 /// Revoke a token by ID

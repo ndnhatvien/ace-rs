@@ -12,8 +12,12 @@ RUN rustup toolchain install nightly && rustup default nightly
 # Copy manifests
 COPY Cargo.toml Cargo.lock ./
 
-# Copy source
+# Copy source and sqlx offline query cache
 COPY src ./src
+COPY .sqlx ./.sqlx
+
+# Set sqlx to offline mode (no database needed at compile time)
+ENV SQLX_OFFLINE=true
 
 # Build server binary with server feature
 RUN cargo build --release --bin ace-server-rs --features server

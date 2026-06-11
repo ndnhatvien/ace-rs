@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO blobs (blob_name, path, content, content_hash, created_at, updated_at)\n            VALUES (?, ?, ?, ?, ?, ?)\n            ON CONFLICT(blob_name) DO UPDATE SET\n                content = excluded.content,\n                content_hash = excluded.content_hash,\n                updated_at = excluded.updated_at\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "939740321e86d598f40652872fda65359580eb4fc4f7ddbb8853048857735dc6"
+}

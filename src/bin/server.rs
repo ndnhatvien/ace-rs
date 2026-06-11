@@ -3,8 +3,7 @@
 use ace_tool::server::{api, config::ServerConfig, db};
 use anyhow::Result;
 use std::sync::Arc;
-use std::time::Duration;
-use tower_sessions::{cookie::SameSite, Expiry, SessionManagerLayer};
+use tower_sessions::{cookie::{SameSite, time::Duration}, Expiry, SessionManagerLayer};
 use tower_sessions_sqlx_store::SqliteStore;
 
 #[tokio::main]
@@ -33,7 +32,7 @@ async fn main() -> Result<()> {
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(false) // Set to true in production with HTTPS
         .with_same_site(SameSite::Lax)
-        .with_expiry(Expiry::OnInactivity(Duration::from_secs(3600)));
+        .with_expiry(Expiry::OnInactivity(Duration::hours(1)));
 
     // Build app state
     let app_state = api::AppState {

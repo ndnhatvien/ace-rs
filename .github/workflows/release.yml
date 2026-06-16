@@ -53,8 +53,6 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/ace-server-rs:latest
             ghcr.io/${{ github.repository_owner }}/ace-server-rs:${{ steps.version.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           platforms: linux/amd64
 
   # ============================================================

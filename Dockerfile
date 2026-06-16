@@ -34,6 +34,7 @@ COPY --from=builder /app/target/release/ace-server-rs /usr/local/bin/
 EXPOSE 8080
 
 # Volume for database
+RUN mkdir -p /data && chmod 777 /data
 VOLUME /data
 
 # Run server

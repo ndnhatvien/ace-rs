@@ -1,10 +1,10 @@
-# fly.toml app configuration file generated for ace-mcp on 2026-06-16T12:18:59Z
+# fly.toml app configuration file generated for ace-mcp on 2026-06-16T13:01:13Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
 app = 'ace-mcp'
-primary_region = 'ams'
+primary_region = 'sin'
 
 [build]
 
